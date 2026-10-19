@@ -28,15 +28,15 @@ queue.TryEnqueue("first");
 queue.TryEnqueue("second");
 
 ArrayQueue<string>.EnqueueResult result = queue.Enqueue("third");
-if (result.HasOverwritten)
-    Console.WriteLine($"Replaced: {result.Overwritten}");
+if (result.TryGetOverwritten(out var overwritten))
+    Console.WriteLine($"Replaced: {overwritten}");
 
 while (queue.TryDequeue(out var item))
     Console.WriteLine(item);
 ```
 
-Use `EnqueueResult.HasOverwritten` to determine whether an element was replaced. The replaced
-value may itself be `null` or the default value of `T`.
+Use `EnqueueResult.TryGetOverwritten` to determine whether an element was replaced and retrieve it.
+The replaced value may itself be `null` or the default value of `T`.
 
 ## `SegQueue<T>`
 

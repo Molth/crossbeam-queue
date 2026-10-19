@@ -92,9 +92,9 @@ namespace crossbeam
         /// </summary>
         /// <param name="item">The element to add to the queue. The value can be a null reference.</param>
         /// <returns>
-        ///     A result whose <see cref="EnqueueResult.HasOverwritten" /> field indicates whether the oldest
-        ///     element was replaced. When it was replaced, <see cref="EnqueueResult.Overwritten" /> contains that
-        ///     element; otherwise, it contains the default value of <typeparamref name="T" />.
+        ///     A result. Call <see cref="ArrayQueue{T}.EnqueueResult.TryGetOverwritten" /> to determine whether the
+        ///     oldest element was replaced and retrieve it. If no element was replaced, the output parameter contains
+        ///     the default value of <typeparamref name="T" />.
         /// </returns>
         public EnqueueResult Enqueue(T? item) => _handle.Enqueue(item);
 
@@ -119,13 +119,13 @@ namespace crossbeam
             /// <summary>
             ///     Indicates whether <see cref="Enqueue" /> replaced the oldest element.
             /// </summary>
-            public readonly bool HasOverwritten;
+            private readonly bool _hasOverwritten;
 
             /// <summary>
             ///     The oldest element replaced by <see cref="Enqueue" />,
             ///     or the default value of the element type when no element was replaced.
             /// </summary>
-            public readonly T? Overwritten;
+            private readonly T? _overwritten;
 
             /// <summary>
             ///     Initializes a result with the replacement status and replaced element.
@@ -140,8 +140,26 @@ namespace crossbeam
             /// </param>
             private EnqueueResult(bool hasOverwritten, T? overwritten)
             {
-                HasOverwritten = hasOverwritten;
-                Overwritten = overwritten;
+                _hasOverwritten = hasOverwritten;
+                _overwritten = overwritten;
+            }
+
+            /// <summary>
+            ///     Gets the oldest element replaced by <see cref="Enqueue" />.
+            /// </summary>
+            /// <param name="overwritten">
+            ///     When this method returns, contains the replaced element if one was replaced;
+            ///     otherwise, contains the default value of the element type.
+            /// </param>
+            /// <returns>
+            ///     <see langword="true" /> if <see cref="Enqueue" /> replaced an element;
+            ///     otherwise, <see langword="false" />.
+            /// </returns>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public bool TryGetOverwritten(out T? overwritten)
+            {
+                overwritten = _overwritten;
+                return _hasOverwritten;
             }
 
             /// <summary>
