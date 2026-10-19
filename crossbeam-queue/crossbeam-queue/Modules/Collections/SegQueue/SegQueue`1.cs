@@ -9,12 +9,32 @@ namespace crossbeam
     /// </summary>
     /// <typeparam name="T">The type of elements stored in the queue.</typeparam>
     /// <remarks>
-    ///     The queue is implemented as a linked list of segments, each of which stores multiple elements.
-    ///     The queue has no element-count limit, but it allocates segments as needed and is somewhat slower
-    ///     than <see cref="ArrayQueue{T}" />.
-    ///     <br />
-    ///     The implementation is based on the Rust source:
-    ///     <c>https://github.com/crossbeam-rs/crossbeam/blob/main/crossbeam-queue/src/seg_queue.rs</c>.
+    ///     <para>
+    ///         The queue stores elements in a linked list of blocks,
+    ///         with multiple element slots in each block.
+    ///     </para>
+    ///     <para>
+    ///         The queue has no element-count limit.
+    ///         <br />
+    ///         Its <c>capacity</c> constructor argument sets the
+    ///         maximum number of unused blocks retained for reuse; it does not limit the number of
+    ///         queued elements.
+    ///         <br />
+    ///         Blocks are allocated as needed.
+    ///     </para>
+    ///     <para>
+    ///         Allocating blocks as the queue grows makes it somewhat slower than
+    ///         <see cref="ArrayQueue{T}" />.
+    ///     </para>
+    ///     <para>Rust source:</para>
+    ///     <list type="bullet">
+    ///         <item>
+    ///             <description>
+    ///                 Crossbeam Rust implementation:<br />
+    ///                 <c>https://github.com/crossbeam-rs/crossbeam/blob/main/crossbeam-queue/src/seg_queue.rs</c>
+    ///             </description>
+    ///         </item>
+    ///     </list>
     /// </remarks>
     [BindingType(typeof(CachePaddedSegQueue<>))]
     public sealed class SegQueue<T>

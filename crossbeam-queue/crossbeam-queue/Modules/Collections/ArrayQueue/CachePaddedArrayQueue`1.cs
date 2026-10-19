@@ -11,22 +11,6 @@ namespace crossbeam
     ///     A bounded multi-producer multi-consumer queue.
     /// </summary>
     /// <typeparam name="T">The type of elements stored in the queue.</typeparam>
-    /// <remarks>
-    ///     The queue allocates a fixed-capacity buffer when constructed and cannot hold more elements than
-    ///     that buffer allows. <see cref="TryEnqueue" /> returns <see langword="false" /> when the queue is full;
-    ///     <see cref="Enqueue" /> replaces and returns the oldest element, allowing the queue to act as a ring buffer.
-    ///     Preallocating the buffer makes this queue somewhat faster than <see cref="SegQueue{T}" />.
-    ///     <list type="bullet">
-    ///         <item>
-    ///             <description>The Rust implementation follows Crossbeam's bounded MPMC queue.</description>
-    ///         </item>
-    ///         <item>
-    ///             <description>Its design is based on Dmitry Vyukov's bounded MPMC queue.</description>
-    ///         </item>
-    ///     </list>
-    ///     <c>https://github.com/crossbeam-rs/crossbeam/blob/main/crossbeam-queue/src/array_queue.rs</c>
-    ///     <c>http://www.1024cores.net/home/lock-free-algorithms/queues/bounded-mpmc-queue</c>
-    /// </remarks>
     [StructLayout(LayoutKind.Sequential)]
     [BindingType(typeof(RawArrayQueue<>))]
     internal struct CachePaddedArrayQueue<T>
@@ -129,6 +113,7 @@ namespace crossbeam
         ///     the default value of <typeparamref name="T" />.
         /// </returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [return: MustBeUsed]
         public ArrayQueue<T>.EnqueueResult Enqueue(T? item) => _handle.Enqueue(item);
 
         /// <summary>

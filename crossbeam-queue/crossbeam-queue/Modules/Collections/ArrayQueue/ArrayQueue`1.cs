@@ -11,20 +11,45 @@ namespace crossbeam
     /// </summary>
     /// <typeparam name="T">The type of elements stored in the queue.</typeparam>
     /// <remarks>
-    ///     The queue allocates a fixed-capacity buffer when constructed and cannot hold more elements than
-    ///     that buffer allows. <see cref="TryEnqueue" /> returns <see langword="false" /> when the queue is full;
-    ///     <see cref="Enqueue" /> replaces and returns the oldest element, allowing the queue to act as a ring buffer.
-    ///     Preallocating the buffer makes this queue somewhat faster than <see cref="SegQueue{T}" />.
+    ///     <para>
+    ///         The queue allocates a fixed-capacity buffer when constructed.
+    ///         <br />
+    ///         The buffer determines the maximum number of elements the queue can hold.
+    ///     </para>
     ///     <list type="bullet">
     ///         <item>
-    ///             <description>The Rust implementation follows Crossbeam's bounded MPMC queue.</description>
+    ///             <description>
+    ///                 <see cref="TryEnqueue" /> returns <see langword="false" /> when the queue is full.
+    ///             </description>
     ///         </item>
     ///         <item>
-    ///             <description>Its design is based on Dmitry Vyukov's bounded MPMC queue.</description>
+    ///             <description>
+    ///                 <see cref="Enqueue" /> replaces the oldest element when the queue is full and returns it in an
+    ///                 <see cref="ArrayQueue{T}.EnqueueResult" />, allowing the queue to act as a ring buffer.
+    ///             </description>
     ///         </item>
     ///     </list>
-    ///     <c>https://github.com/crossbeam-rs/crossbeam/blob/main/crossbeam-queue/src/array_queue.rs</c>
-    ///     <c>http://www.1024cores.net/home/lock-free-algorithms/queues/bounded-mpmc-queue</c>
+    ///     <para>
+    ///         The preallocated buffer makes this queue somewhat faster than <see cref="SegQueue{T}" />.
+    ///     </para>
+    ///     <para>
+    ///         The Rust implementation is based on Dmitry Vyukov's bounded MPMC queue.
+    ///     </para>
+    ///     <para>Sources:</para>
+    ///     <list type="bullet">
+    ///         <item>
+    ///             <description>
+    ///                 Crossbeam Rust implementation:<br />
+    ///                 <c>https://github.com/crossbeam-rs/crossbeam/blob/main/crossbeam-queue/src/array_queue.rs</c>
+    ///             </description>
+    ///         </item>
+    ///         <item>
+    ///             <description>
+    ///                 Dmitry Vyukov's bounded MPMC queue:<br />
+    ///                 <c>http://www.1024cores.net/home/lock-free-algorithms/queues/bounded-mpmc-queue</c>
+    ///             </description>
+    ///         </item>
+    ///     </list>
     /// </remarks>
     [BindingType(typeof(CachePaddedArrayQueue<>))]
     public sealed class ArrayQueue<T>
@@ -96,6 +121,7 @@ namespace crossbeam
         ///     oldest element was replaced and retrieve it. If no element was replaced, the output parameter contains
         ///     the default value of <typeparamref name="T" />.
         /// </returns>
+        [return: MustBeUsed]
         public EnqueueResult Enqueue(T? item) => _handle.Enqueue(item);
 
         /// <summary>
@@ -138,6 +164,7 @@ namespace crossbeam
             ///     The replaced element,
             ///     or the default value of the element type when no element was replaced.
             /// </param>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             private EnqueueResult(bool hasOverwritten, T? overwritten)
             {
                 _hasOverwritten = hasOverwritten;

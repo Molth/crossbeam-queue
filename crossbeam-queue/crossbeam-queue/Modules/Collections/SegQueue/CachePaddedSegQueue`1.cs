@@ -11,14 +11,6 @@ namespace crossbeam
     ///     An unbounded multi-producer multi-consumer queue.
     /// </summary>
     /// <typeparam name="T">The type of elements stored in the queue.</typeparam>
-    /// <remarks>
-    ///     The queue is implemented as a linked list of segments, each of which stores multiple elements.
-    ///     The queue has no element-count limit, but it allocates segments as needed and is somewhat slower
-    ///     than <see cref="ArrayQueue{T}" />.
-    ///     <br />
-    ///     The implementation is based on the Rust source:
-    ///     <c>https://github.com/crossbeam-rs/crossbeam/blob/main/crossbeam-queue/src/seg_queue.rs</c>.
-    /// </remarks>
     [StructLayout(LayoutKind.Sequential)]
     [BindingType(typeof(RawSegQueue<>))]
     internal struct CachePaddedSegQueue<T>
