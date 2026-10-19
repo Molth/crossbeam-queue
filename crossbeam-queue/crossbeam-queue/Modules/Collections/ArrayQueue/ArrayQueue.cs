@@ -12,6 +12,7 @@ namespace crossbeam
         /// <summary>
         ///     A slot in a queue.
         /// </summary>
+        /// <typeparam name="T">The type of elements stored in the queue.</typeparam>
         [StructLayout(LayoutKind.Sequential)]
         public struct Slot<T>
         {

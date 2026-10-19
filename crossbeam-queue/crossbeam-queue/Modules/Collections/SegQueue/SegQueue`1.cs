@@ -26,7 +26,7 @@ namespace crossbeam
     ///         Allocating blocks as the queue grows makes it somewhat slower than
     ///         <see cref="ArrayQueue{T}" />.
     ///     </para>
-    ///     <para>Rust source:</para>
+    ///     <para>Source:</para>
     ///     <list type="bullet">
     ///         <item>
     ///             <description>

@@ -49,6 +49,7 @@ namespace crossbeam
         /// <summary>
         ///     A slot in a block.
         /// </summary>
+        /// <typeparam name="T">The type of elements stored in the queue.</typeparam>
         [StructLayout(LayoutKind.Sequential)]
         public struct Slot<T>
         {
@@ -76,6 +77,7 @@ namespace crossbeam
         /// <summary>
         ///     Stores the fixed number of slots in a block as contiguous fields.
         /// </summary>
+        /// <typeparam name="T">The type of elements stored in the queue.</typeparam>
         [StructLayout(LayoutKind.Sequential)]
         public struct Slots<T>
         {
@@ -131,6 +133,7 @@ namespace crossbeam
         /// <summary>
         ///     A block in the linked list.
         /// </summary>
+        /// <typeparam name="T">The type of elements stored in the queue.</typeparam>
         /// <remarks>
         ///     Each block can hold up to <see cref="BLOCK_CAP" /> elements.
         /// </remarks>
@@ -168,6 +171,7 @@ namespace crossbeam
         /// <summary>
         ///     Stores a queue index and the block containing that index.
         /// </summary>
+        /// <typeparam name="T">The type of elements stored in the queue.</typeparam>
         [StructLayout(LayoutKind.Sequential, Size = CACHE_LINE_SIZE)]
         public struct CachePaddedPosition<T>
         {

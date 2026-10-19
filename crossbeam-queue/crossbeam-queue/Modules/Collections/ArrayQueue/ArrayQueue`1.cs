@@ -106,9 +106,13 @@ namespace crossbeam
         /// <summary>
         ///     Attempts to add an element to the end of the queue.
         /// </summary>
-        /// <param name="item">The element to add to the queue. The value can be a null reference.</param>
+        /// <param name="item">
+        ///     The element to add to the queue.
+        ///     The value can be a null reference.
+        /// </param>
         /// <returns>
-        ///     <see langword="true" /> if the element was enqueued; otherwise, <see langword="false" /> if the queue is full.
+        ///     <see langword="true" /> if the element was enqueued;
+        ///     otherwise, <see langword="false" /> if the queue is full.
         /// </returns>
         public bool TryEnqueue(T? item) => _handle.TryEnqueue(item);
 
@@ -118,8 +122,8 @@ namespace crossbeam
         /// <param name="item">The element to add to the queue. The value can be a null reference.</param>
         /// <returns>
         ///     A result. Call <see cref="ArrayQueue{T}.EnqueueResult.TryGetOverwritten" /> to determine whether the
-        ///     oldest element was replaced and retrieve it. If no element was replaced, the output parameter contains
-        ///     the default value of <typeparamref name="T" />.
+        ///     oldest element was replaced and retrieve it. When that method returns <see langword="false" />, its
+        ///     <c>overwritten</c> output parameter contains the default value of <typeparamref name="T" />.
         /// </returns>
         [return: MustBeUsed]
         public EnqueueResult Enqueue(T? item) => _handle.Enqueue(item);
@@ -128,11 +132,12 @@ namespace crossbeam
         ///     Attempts to remove an element from the beginning of the queue.
         /// </summary>
         /// <param name="item">
-        ///     When this method returns <see langword="true" />, contains the removed element; otherwise,
-        ///     contains the default value of <typeparamref name="T" />.
+        ///     When this method returns <see langword="true" />, contains the removed element;
+        ///     otherwise, contains the default value of <typeparamref name="T" />.
         /// </param>
         /// <returns>
-        ///     <see langword="true" /> if an element was removed; otherwise, <see langword="false" /> if the queue is empty.
+        ///     <see langword="true" /> if an element was removed;
+        ///     otherwise, <see langword="false" /> if the queue is empty.
         /// </returns>
         public bool TryDequeue(out T? item) => _handle.TryDequeue(out item);
 

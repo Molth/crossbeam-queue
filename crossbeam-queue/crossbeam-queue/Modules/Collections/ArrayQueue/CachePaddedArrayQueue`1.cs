@@ -109,8 +109,8 @@ namespace crossbeam
         /// <param name="item">The element to add to the queue. The value can be a null reference.</param>
         /// <returns>
         ///     A result. Call <see cref="ArrayQueue{T}.EnqueueResult.TryGetOverwritten" /> to determine whether the
-        ///     oldest element was replaced and retrieve it. If no element was replaced, the output parameter contains
-        ///     the default value of <typeparamref name="T" />.
+        ///     oldest element was replaced and retrieve it. When that method returns <see langword="false" />, its
+        ///     <c>overwritten</c> output parameter contains the default value of <typeparamref name="T" />.
         /// </returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [return: MustBeUsed]
