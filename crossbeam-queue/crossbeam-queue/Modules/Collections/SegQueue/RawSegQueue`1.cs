@@ -13,7 +13,7 @@ namespace crossbeam
     ///     An unbounded multi-producer multi-consumer queue.
     /// </summary>
     /// <typeparam name="T">The type of elements stored in the queue.</typeparam>
-    [StructLayout(LayoutKind.Sequential, Size = 3 * CACHE_LINE_SIZE)]
+    [StructLayout(LayoutKind.Sequential, Size = 5 * CACHE_LINE_SIZE)]
     internal struct RawSegQueue<T>
     {
         /// <summary>
@@ -53,8 +53,8 @@ namespace crossbeam
         public void Enqueue(T? value)
         {
             var backoff = new Backoff();
-            var tail = _tail.Index.Load(Ordering.Acquire);
-            var block = _tail.Block.Load(Ordering.Acquire);
+            var tail = _tail.GetIndexRef().Load(Ordering.Acquire);
+            var block = _tail.GetBlockRef().Load(Ordering.Acquire);
             Block<T>? nextBlock = null;
 
             try
@@ -66,8 +66,8 @@ namespace crossbeam
                     if (offset == BLOCK_CAP)
                     {
                         backoff.Snooze();
-                        tail = _tail.Index.Load(Ordering.Acquire);
-                        block = _tail.Block.Load(Ordering.Acquire);
+                        tail = _tail.GetIndexRef().Load(Ordering.Acquire);
+                        block = _tail.GetBlockRef().Load(Ordering.Acquire);
                         continue;
                     }
 
@@ -78,23 +78,23 @@ namespace crossbeam
                     {
                         var @new = RentBlock();
 
-                        if (_tail.Block.CompareExchange(@new, block) == block)
+                        if (_tail.GetBlockRef().CompareExchange(@new, block) == block)
                         {
-                            _head.Block.Store(@new, Ordering.Release);
+                            _head.GetBlockRef().Store(@new, Ordering.Release);
                             block = @new;
                         }
                         else
                         {
                             nextBlock = @new;
-                            tail = _tail.Index.Load(Ordering.Acquire);
-                            block = _tail.Block.Load(Ordering.Acquire);
+                            tail = _tail.GetIndexRef().Load(Ordering.Acquire);
+                            block = _tail.GetBlockRef().Load(Ordering.Acquire);
                             continue;
                         }
                     }
 
                     var newTail = unchecked(tail + (1 << (int)SHIFT));
 
-                    var t = _tail.Index.CompareExchange(newTail, tail);
+                    var t = _tail.GetIndexRef().CompareExchange(newTail, tail);
 
                     if (t == tail)
                     {
@@ -104,8 +104,8 @@ namespace crossbeam
                             nextBlock = null;
                             var nextIndex = unchecked(newTail + (1 << (int)SHIFT));
 
-                            _tail.Block.Store(nextBlockUnwrap, Ordering.Release);
-                            _tail.Index.Store(nextIndex, Ordering.Release);
+                            _tail.GetBlockRef().Store(nextBlockUnwrap, Ordering.Release);
+                            _tail.GetIndexRef().Store(nextIndex, Ordering.Release);
                             block.Next.Store(nextBlockUnwrap, Ordering.Release);
                         }
 
@@ -118,7 +118,7 @@ namespace crossbeam
                     else
                     {
                         tail = t;
-                        block = _tail.Block.Load(Ordering.Acquire);
+                        block = _tail.GetBlockRef().Load(Ordering.Acquire);
                         backoff.Spin();
                     }
                 }
@@ -143,8 +143,8 @@ namespace crossbeam
         public bool TryDequeue(out T? result)
         {
             var backoff = new Backoff();
-            var head = _head.Index.Load(Ordering.Acquire);
-            var block = _head.Block.Load(Ordering.Acquire);
+            var head = _head.GetIndexRef().Load(Ordering.Acquire);
+            var block = _head.GetBlockRef().Load(Ordering.Acquire);
 
             while (true)
             {
@@ -153,8 +153,8 @@ namespace crossbeam
                 if (offset == BLOCK_CAP)
                 {
                     backoff.Snooze();
-                    head = _head.Index.Load(Ordering.Acquire);
-                    block = _head.Block.Load(Ordering.Acquire);
+                    head = _head.GetIndexRef().Load(Ordering.Acquire);
+                    block = _head.GetBlockRef().Load(Ordering.Acquire);
                     continue;
                 }
 
@@ -163,7 +163,7 @@ namespace crossbeam
                 if ((newHead & HAS_NEXT) == 0)
                 {
                     Interlocked.MemoryBarrier();
-                    var tail = _tail.Index.Load(Ordering.Relaxed);
+                    var tail = _tail.GetIndexRef().Load(Ordering.Relaxed);
 
                     if (head >> (int)SHIFT == tail >> (int)SHIFT)
                     {
@@ -178,12 +178,12 @@ namespace crossbeam
                 if (block == null)
                 {
                     backoff.Snooze();
-                    head = _head.Index.Load(Ordering.Acquire);
-                    block = _head.Block.Load(Ordering.Acquire);
+                    head = _head.GetIndexRef().Load(Ordering.Acquire);
+                    block = _head.GetBlockRef().Load(Ordering.Acquire);
                     continue;
                 }
 
-                var h = _head.Index.CompareExchange(newHead, head);
+                var h = _head.GetIndexRef().CompareExchange(newHead, head);
 
                 if (h == head)
                 {
@@ -194,8 +194,8 @@ namespace crossbeam
                         if (next.Next.Load(Ordering.Relaxed) != null)
                             nextIndex |= HAS_NEXT;
 
-                        _head.Block.Store(next, Ordering.Release);
-                        _head.Index.Store(nextIndex, Ordering.Release);
+                        _head.GetBlockRef().Store(next, Ordering.Release);
+                        _head.GetIndexRef().Store(nextIndex, Ordering.Release);
                     }
 
                     ref var slot = ref Slots<T>.GetUnchecked(ref block.Slots, offset);
@@ -215,7 +215,7 @@ namespace crossbeam
                 }
 
                 head = h;
-                block = _head.Block.Load(Ordering.Acquire);
+                block = _head.GetBlockRef().Load(Ordering.Acquire);
                 backoff.Spin();
             }
         }
@@ -230,8 +230,8 @@ namespace crossbeam
         /// </remarks>
         public bool IsEmpty()
         {
-            var head = _head.Index.Load(Ordering.SeqCst);
-            var tail = _tail.Index.Load(Ordering.SeqCst);
+            var head = _head.GetIndexRef().Load(Ordering.SeqCst);
+            var tail = _tail.GetIndexRef().Load(Ordering.SeqCst);
 
             return head >> (int)SHIFT == tail >> (int)SHIFT;
         }
@@ -248,10 +248,10 @@ namespace crossbeam
         {
             while (true)
             {
-                var tail = _tail.Index.Load(Ordering.SeqCst);
-                var head = _head.Index.Load(Ordering.SeqCst);
+                var tail = _tail.GetIndexRef().Load(Ordering.SeqCst);
+                var head = _head.GetIndexRef().Load(Ordering.SeqCst);
 
-                if (_tail.Index.Load(Ordering.SeqCst) == tail)
+                if (_tail.GetIndexRef().Load(Ordering.SeqCst) == tail)
                 {
                     tail &= unchecked((nuint)~((1 << (int)SHIFT) - 1));
                     head &= unchecked((nuint)~((1 << (int)SHIFT) - 1));

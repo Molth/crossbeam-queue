@@ -47,6 +47,35 @@ namespace crossbeam
         public const nuint HAS_NEXT = 1;
 
         /// <summary>
+        ///     Returns a reference to the queue index stored in a padded position.
+        /// </summary>
+        /// <typeparam name="T">The type of elements stored in the queue.</typeparam>
+        /// <param name="value">The padded position whose index is requested.</param>
+        /// <returns>A reference to the position's existing atomic index; no value is copied.</returns>
+        /// <remarks>
+        ///     The returned reference aliases the position's storage. Callers must use the atomic operations and memory
+        ///     orderings required by the queue algorithm.
+        /// </remarks>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static ref AtomicUsize GetIndexRef<T>(ref this CachePaddedPosition<T> value) => ref value.Value.Value.Index;
+
+        /// <summary>
+        ///     Returns a typed reference to the block pointer stored in a padded position.
+        /// </summary>
+        /// <typeparam name="T">The type of elements stored in the queue.</typeparam>
+        /// <param name="value">The padded position whose block pointer is requested.</param>
+        /// <returns>A reference to the position's atomic block pointer; no value is copied.</returns>
+        /// <remarks>
+        ///     The fixed-size backing position stores this reference as <see cref="AtomicRef{T}" /> with
+        ///     <see cref="object" /> as its type argument. Since <see cref="AtomicRef{T}" /> stores its value in a single
+        ///     managed-reference field, this method reinterprets that field as an <see cref="AtomicRef{T}" /> for
+        ///     <see cref="Block{T}" />. Preserve that representation and store only blocks of the matching
+        ///     <typeparamref name="T" />; callers must also use the queue's required atomic memory orderings.
+        /// </remarks>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static ref AtomicRef<Block<T>> GetBlockRef<T>(ref this CachePaddedPosition<T> value) => ref Unsafe.As<AtomicRef<object>, AtomicRef<Block<T>>>(ref value.Value.Value.Block);
+
+        /// <summary>
         ///     A slot in a block.
         /// </summary>
         /// <typeparam name="T">The type of elements stored in the queue.</typeparam>
@@ -66,6 +95,7 @@ namespace crossbeam
             /// <summary>
             ///     Waits until a value has been written into this slot.
             /// </summary>
+            [MethodImpl(MethodImplOptions.NoInlining)]
             public void WaitWrite()
             {
                 var backoff = new Backoff();
@@ -154,6 +184,7 @@ namespace crossbeam
             ///     Waits until the next block has been linked and returns it.
             /// </summary>
             /// <returns>The next block in the linked list.</returns>
+            [MethodImpl(MethodImplOptions.NoInlining)]
             public Block<T> WaitNext()
             {
                 var backoff = new Backoff();
@@ -171,19 +202,52 @@ namespace crossbeam
         /// <summary>
         ///     Stores a queue index and the block containing that index.
         /// </summary>
+        /// <remarks>
+        ///     This non-generic backing type must use <see cref="LayoutKind.Explicit" /> because <see cref="Position" />
+        ///     contains a managed reference. With <see cref="LayoutKind.Sequential" />, the compiled size does not equal
+        ///     <see cref="CACHE_LINE_SIZE" />. Its single payload field starts at offset zero so the runtime can describe
+        ///     that reference while the remaining bytes provide padding. Do not add an
+        ///     overlapping field or replace this with a generic sequential struct and infer its runtime size from the
+        ///     declared <c>Size</c>. If the layout changes, verify the actual size of each relevant closed type with
+        ///     <c>Unsafe.SizeOf&lt;T&gt;()</c> on every supported runtime and architecture.
+        /// </remarks>
+        [StructLayout(LayoutKind.Explicit, Size = CACHE_LINE_SIZE)]
+        public struct CachePaddedPosition
+        {
+            /// <summary>
+            ///     The queue index and block reference, starting at offset zero.
+            /// </summary>
+            [FieldOffset(0)] public Position Value;
+
+            /// <summary>
+            ///     Stores a queue index and the block containing that index.
+            /// </summary>
+            [StructLayout(LayoutKind.Sequential)]
+            public struct Position
+            {
+                /// <summary>
+                ///     The index in the queue.
+                /// </summary>
+                public AtomicUsize Index;
+
+                /// <summary>
+                ///     The block in the linked list.
+                /// </summary>
+                public AtomicRef<object> Block;
+            }
+        }
+
+        /// <summary>
+        ///     Stores a queue index and the block containing that index.
+        /// </summary>
         /// <typeparam name="T">The type of elements stored in the queue.</typeparam>
-        [StructLayout(LayoutKind.Sequential, Size = CACHE_LINE_SIZE)]
+        [StructLayout(LayoutKind.Sequential)]
         public struct CachePaddedPosition<T>
         {
             /// <summary>
-            ///     The index in the queue.
+            ///     The cache-line-sized backing position used by this element type.
             /// </summary>
-            public AtomicUsize Index;
-
-            /// <summary>
-            ///     The block in the linked list.
-            /// </summary>
-            public AtomicRef<Block<T>> Block;
+            public CachePaddedPosition Value;
         }
     }
 }

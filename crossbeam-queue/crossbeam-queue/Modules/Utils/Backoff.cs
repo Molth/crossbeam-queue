@@ -62,7 +62,7 @@ namespace crossbeam
         ///     using the <c>YIELD</c> or <c>PAUSE</c> instruction, and the current thread may yield by
         ///     giving up a time slice to the operating system scheduler.
         /// </remarks>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public void Snooze()
         {
             if (_step <= SPIN_LIMIT)

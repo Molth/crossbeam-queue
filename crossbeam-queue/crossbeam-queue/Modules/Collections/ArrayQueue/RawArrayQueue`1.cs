@@ -39,14 +39,19 @@ namespace crossbeam
         private CachePaddedAtomicUsize _tail;
 
         /// <summary>
+        ///     The cache-padded buffer reference and lap stamp.
+        /// </summary>
+        private readonly CachePaddedArrayWithOneLap<T> _bufferWithOneLap;
+
+        /// <summary>
         ///     The buffer holding slots.
         /// </summary>
-        private readonly Slot<T>[] _buffer;
+        private readonly Slot<T>[] Buffer => _bufferWithOneLap.Buffer;
 
         /// <summary>
         ///     A stamp with the value of <c>{ lap: 1, index: 0 }</c>.
         /// </summary>
-        private readonly nuint _oneLap;
+        private readonly nuint OneLap => _bufferWithOneLap.OneLap;
 
         /// <summary>
         ///     Creates a new bounded queue with the given capacity.
@@ -66,8 +71,7 @@ namespace crossbeam
             for (var i = 0; i < buffer.Length; ++i)
                 buffer[i].Stamp = new AtomicUsize((nuint)i);
 
-            _buffer = buffer;
-            _oneLap = BitOperationsHelpers.RoundUpToPowerOf2((uint)capacity + 1U);
+            _bufferWithOneLap = new CachePaddedArrayWithOneLap<T>(buffer, BitOperationsHelpers.RoundUpToPowerOf2((uint)capacity + 1U));
         }
 
         /// <summary>
@@ -88,12 +92,12 @@ namespace crossbeam
 
             while (true)
             {
-                var index = tail & (_oneLap - 1);
-                var lap = tail & ~(_oneLap - 1);
+                var index = tail & (OneLap - 1);
+                var lap = tail & ~(OneLap - 1);
 
-                var newTail = index + 1 < Capacity() ? tail + 1 : unchecked(lap + _oneLap);
+                var newTail = index + 1 < Capacity() ? tail + 1 : unchecked(lap + OneLap);
 
-                ref var slot = ref _buffer[(int)index];
+                ref var slot = ref Buffer.GetUnchecked(index);
                 var stamp = slot.Stamp.Load(Ordering.Acquire);
 
                 if (tail == stamp)
@@ -109,12 +113,12 @@ namespace crossbeam
                     tail = t;
                     backoff.Spin();
                 }
-                else if (unchecked(stamp + _oneLap) == tail + 1)
+                else if (unchecked(stamp + OneLap) == tail + 1)
                 {
                     Interlocked.MemoryBarrier();
                     var head = _head.Load(Ordering.Relaxed);
 
-                    if (unchecked(head + _oneLap) == tail)
+                    if (unchecked(head + OneLap) == tail)
                         return false;
 
                     backoff.Spin();
@@ -145,12 +149,12 @@ namespace crossbeam
 
             while (true)
             {
-                var index = tail & (_oneLap - 1);
-                var lap = tail & ~(_oneLap - 1);
+                var index = tail & (OneLap - 1);
+                var lap = tail & ~(OneLap - 1);
 
-                var newTail = index + 1 < Capacity() ? tail + 1 : unchecked(lap + _oneLap);
+                var newTail = index + 1 < Capacity() ? tail + 1 : unchecked(lap + OneLap);
 
-                ref var slot = ref _buffer[(int)index];
+                ref var slot = ref Buffer.GetUnchecked(index);
                 var stamp = slot.Stamp.Load(Ordering.Acquire);
 
                 if (tail == stamp)
@@ -166,12 +170,12 @@ namespace crossbeam
                     tail = t;
                     backoff.Spin();
                 }
-                else if (unchecked(stamp + _oneLap) == tail + 1)
+                else if (unchecked(stamp + OneLap) == tail + 1)
                 {
                     Interlocked.MemoryBarrier();
 
-                    var head = unchecked(tail - _oneLap);
-                    var newHead = unchecked(newTail - _oneLap);
+                    var head = unchecked(tail - OneLap);
+                    var newHead = unchecked(newTail - OneLap);
 
                     var h = _head.CompareExchange(newHead, head);
                     if (h == head)
@@ -214,15 +218,15 @@ namespace crossbeam
 
             while (true)
             {
-                var index = head & (_oneLap - 1);
-                var lap = head & ~(_oneLap - 1);
+                var index = head & (OneLap - 1);
+                var lap = head & ~(OneLap - 1);
 
-                ref var slot = ref _buffer[(int)index];
+                ref var slot = ref Buffer.GetUnchecked(index);
                 var stamp = slot.Stamp.Load(Ordering.Acquire);
 
                 if (head + 1 == stamp)
                 {
-                    var @new = index + 1 < Capacity() ? head + 1 : unchecked(lap + _oneLap);
+                    var @new = index + 1 < Capacity() ? head + 1 : unchecked(lap + OneLap);
 
                     var h = _head.CompareExchange(@new, head);
                     if (h == head)
@@ -231,7 +235,7 @@ namespace crossbeam
                         if (RuntimeHelpers.IsReferenceOrContainsReferences<T>())
                             slot.Value = default;
 
-                        slot.Stamp.Store(unchecked(head + _oneLap), Ordering.Release);
+                        slot.Stamp.Store(unchecked(head + OneLap), Ordering.Release);
                         return true;
                     }
 
@@ -288,7 +292,7 @@ namespace crossbeam
             var tail = _tail.Load(Ordering.SeqCst);
             var head = _head.Load(Ordering.SeqCst);
 
-            return unchecked(head + _oneLap) == tail;
+            return unchecked(head + OneLap) == tail;
         }
 
         /// <summary>
@@ -308,8 +312,8 @@ namespace crossbeam
 
                 if (_tail.Load(Ordering.SeqCst) == tail)
                 {
-                    var hix = head & (_oneLap - 1);
-                    var tix = tail & (_oneLap - 1);
+                    var hix = head & (OneLap - 1);
+                    var tix = tail & (OneLap - 1);
 
                     if (hix < tix)
                         return tix - hix;
@@ -330,6 +334,6 @@ namespace crossbeam
         /// </summary>
         /// <returns>The maximum number of elements the queue can hold.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public readonly nuint Capacity() => (nuint)_buffer.Length;
+        public readonly nuint Capacity() => (nuint)Buffer.Length;
     }
 }
