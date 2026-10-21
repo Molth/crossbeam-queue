@@ -14,6 +14,7 @@ namespace crossbeam
     /// </summary>
     /// <typeparam name="T">The type of elements stored in the queue.</typeparam>
     [StructLayout(LayoutKind.Sequential, Size = 3 * CACHE_LINE_SIZE)]
+    [IsReferenceOrContainsReferences]
     internal struct RawArrayQueue<T>
     {
         /// <summary>
@@ -95,7 +96,7 @@ namespace crossbeam
                 var index = tail & (OneLap - 1);
                 var lap = tail & ~(OneLap - 1);
 
-                var newTail = index + 1 < Capacity() ? tail + 1 : unchecked(lap + OneLap);
+                var newTail = index + 1 < Capacity() ? tail + 1 : lap.WrappingAdd(OneLap);
 
                 ref var slot = ref Buffer.GetUnchecked(index);
                 var stamp = slot.Stamp.Load(Ordering.Acquire);
@@ -113,12 +114,12 @@ namespace crossbeam
                     tail = t;
                     backoff.Spin();
                 }
-                else if (unchecked(stamp + OneLap) == tail + 1)
+                else if (stamp.WrappingAdd(OneLap) == tail + 1)
                 {
                     Interlocked.MemoryBarrier();
                     var head = _head.Load(Ordering.Relaxed);
 
-                    if (unchecked(head + OneLap) == tail)
+                    if (head.WrappingAdd(OneLap) == tail)
                         return false;
 
                     backoff.Spin();
@@ -152,7 +153,7 @@ namespace crossbeam
                 var index = tail & (OneLap - 1);
                 var lap = tail & ~(OneLap - 1);
 
-                var newTail = index + 1 < Capacity() ? tail + 1 : unchecked(lap + OneLap);
+                var newTail = index + 1 < Capacity() ? tail + 1 : lap.WrappingAdd(OneLap);
 
                 ref var slot = ref Buffer.GetUnchecked(index);
                 var stamp = slot.Stamp.Load(Ordering.Acquire);
@@ -170,12 +171,12 @@ namespace crossbeam
                     tail = t;
                     backoff.Spin();
                 }
-                else if (unchecked(stamp + OneLap) == tail + 1)
+                else if (stamp.WrappingAdd(OneLap) == tail + 1)
                 {
                     Interlocked.MemoryBarrier();
 
-                    var head = unchecked(tail - OneLap);
-                    var newHead = unchecked(newTail - OneLap);
+                    var head = tail.WrappingSub(OneLap);
+                    var newHead = newTail.WrappingSub(OneLap);
 
                     var h = _head.CompareExchange(newHead, head);
                     if (h == head)
@@ -226,7 +227,7 @@ namespace crossbeam
 
                 if (head + 1 == stamp)
                 {
-                    var @new = index + 1 < Capacity() ? head + 1 : unchecked(lap + OneLap);
+                    var @new = index + 1 < Capacity() ? head + 1 : lap.WrappingAdd(OneLap);
 
                     var h = _head.CompareExchange(@new, head);
                     if (h == head)
@@ -235,7 +236,7 @@ namespace crossbeam
                         if (RuntimeHelpers.IsReferenceOrContainsReferences<T>())
                             slot.Value = default;
 
-                        slot.Stamp.Store(unchecked(head + OneLap), Ordering.Release);
+                        slot.Stamp.Store(head.WrappingAdd(OneLap), Ordering.Release);
                         return true;
                     }
 
@@ -265,6 +266,13 @@ namespace crossbeam
         }
 
         /// <summary>
+        ///     Returns the capacity of the queue.
+        /// </summary>
+        /// <returns>The maximum number of elements the queue can hold.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public readonly nuint Capacity() => (nuint)Buffer.Length;
+
+        /// <summary>
         ///     Determines whether the queue is empty.
         /// </summary>
         /// <returns><see langword="true" /> if the queue is empty; otherwise, <see langword="false" />.</returns>
@@ -292,7 +300,7 @@ namespace crossbeam
             var tail = _tail.Load(Ordering.SeqCst);
             var head = _head.Load(Ordering.SeqCst);
 
-            return unchecked(head + OneLap) == tail;
+            return head.WrappingAdd(OneLap) == tail;
         }
 
         /// <summary>
@@ -328,12 +336,5 @@ namespace crossbeam
                 }
             }
         }
-
-        /// <summary>
-        ///     Returns the capacity of the queue.
-        /// </summary>
-        /// <returns>The maximum number of elements the queue can hold.</returns>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public readonly nuint Capacity() => (nuint)Buffer.Length;
     }
 }

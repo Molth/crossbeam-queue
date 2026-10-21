@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 
 // ReSharper disable ALL
 
@@ -9,6 +10,27 @@ namespace crossbeam
     /// </summary>
     /// <typeparam name="T">The type of elements stored in the queue.</typeparam>
     /// <remarks>
+    ///     <para>
+    ///         This type is not intended as a drop-in replacement for <see cref="ConcurrentQueue{T}" />.
+    ///         It does not provide the following members:
+    ///     </para>
+    ///     <list type="bullet">
+    ///         <item>
+    ///             <description>
+    ///                 <see cref="ConcurrentQueue{T}.TryPeek" />
+    ///             </description>
+    ///         </item>
+    ///         <item>
+    ///             <description>
+    ///                 <see cref="ConcurrentQueue{T}.GetEnumerator" />
+    ///             </description>
+    ///         </item>
+    ///         <item>
+    ///             <description>
+    ///                 <see cref="ConcurrentQueue{T}.Clear" />
+    ///             </description>
+    ///         </item>
+    ///     </list>
     ///     <para>
     ///         The queue stores elements in a linked list of blocks,
     ///         with multiple element slots in each block.

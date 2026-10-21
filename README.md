@@ -67,6 +67,11 @@ instead.
 The queues accept `null` values. For `TryDequeue`, use the returned `bool` to distinguish an empty
 queue from a dequeued `null` value.
 
+## Api scope
+
+These queues are not drop-in replacements for `ConcurrentQueue<T>`,
+they do not provide `TryPeek`, `GetEnumerator`, or `Clear`.
+
 ## Rust implementations
 
 - [`ArrayQueue`](https://github.com/crossbeam-rs/crossbeam/blob/main/crossbeam-queue/src/array_queue.rs)

@@ -10,6 +10,7 @@ namespace crossbeam
     ///     Provides atomic operations on a managed reference to type <typeparamref name="T" />.
     /// </summary>
     [StructLayout(LayoutKind.Sequential)]
+    [IsReferenceOrContainsReferences]
     [BindingType(typeof(Interlocked))]
     internal struct AtomicRef<T> where T : class?
     {

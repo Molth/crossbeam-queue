@@ -17,6 +17,7 @@ namespace crossbeam
         /// </summary>
         /// <typeparam name="T">The type of elements stored in the queue.</typeparam>
         [StructLayout(LayoutKind.Sequential)]
+        [IsReferenceOrContainsReferences]
         public struct Slot<T>
         {
             /// <summary>
@@ -46,6 +47,8 @@ namespace crossbeam
         ///     supported runtime and architecture.
         /// </remarks>
         [StructLayout(LayoutKind.Explicit, Size = CACHE_LINE_SIZE)]
+        [IsReferenceOrContainsReferences]
+        [BindingType(typeof(ArrayWithOneLap))]
         private readonly struct CachePaddedArrayWithOneLap
         {
             /// <summary>
@@ -68,6 +71,7 @@ namespace crossbeam
             ///     The buffer reference and lap stamp stored by the padded value.
             /// </summary>
             [StructLayout(LayoutKind.Sequential)]
+            [IsReferenceOrContainsReferences]
             public readonly struct ArrayWithOneLap
             {
                 /// <summary>
@@ -102,6 +106,8 @@ namespace crossbeam
         ///     <see cref="OneLap" /> is zero. Construct this value with a valid buffer and its matching lap stamp.
         /// </remarks>
         [StructLayout(LayoutKind.Sequential)]
+        [IsReferenceOrContainsReferences]
+        [BindingType(typeof(CachePaddedArrayWithOneLap))]
         public readonly struct CachePaddedArrayWithOneLap<T>
         {
             /// <summary>

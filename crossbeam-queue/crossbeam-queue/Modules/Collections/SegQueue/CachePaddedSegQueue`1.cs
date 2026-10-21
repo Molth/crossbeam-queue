@@ -12,6 +12,7 @@ namespace crossbeam
     /// </summary>
     /// <typeparam name="T">The type of elements stored in the queue.</typeparam>
     [StructLayout(LayoutKind.Sequential)]
+    [IsReferenceOrContainsReferences]
     [BindingType(typeof(RawSegQueue<>))]
     internal struct CachePaddedSegQueue<T>
     {

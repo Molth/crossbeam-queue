@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
@@ -11,6 +12,27 @@ namespace crossbeam
     /// </summary>
     /// <typeparam name="T">The type of elements stored in the queue.</typeparam>
     /// <remarks>
+    ///     <para>
+    ///         This type is not intended as a drop-in replacement for <see cref="ConcurrentQueue{T}" />.
+    ///         It does not provide the following members:
+    ///     </para>
+    ///     <list type="bullet">
+    ///         <item>
+    ///             <description>
+    ///                 <see cref="ConcurrentQueue{T}.TryPeek" />
+    ///             </description>
+    ///         </item>
+    ///         <item>
+    ///             <description>
+    ///                 <see cref="ConcurrentQueue{T}.GetEnumerator" />
+    ///             </description>
+    ///         </item>
+    ///         <item>
+    ///             <description>
+    ///                 <see cref="ConcurrentQueue{T}.Clear" />
+    ///             </description>
+    ///         </item>
+    ///     </list>
     ///     <para>
     ///         The queue allocates a fixed-capacity buffer when constructed.
     ///         <br />
@@ -121,7 +143,7 @@ namespace crossbeam
         /// </summary>
         /// <param name="item">The element to add to the queue. The value can be a null reference.</param>
         /// <returns>
-        ///     A result. Call <see cref="ArrayQueue{T}.EnqueueResult.TryGetOverwritten" /> to determine whether the
+        ///     A result. Call <see cref="EnqueueResult.TryGetOverwritten" /> to determine whether the
         ///     oldest element was replaced and retrieve it. When that method returns <see langword="false" />, its
         ///     <c>overwritten</c> output parameter contains the default value of <typeparamref name="T" />.
         /// </returns>
@@ -145,6 +167,7 @@ namespace crossbeam
         ///     Describes whether <see cref="Enqueue" /> replaced an element and provides the replaced element.
         /// </summary>
         [StructLayout(LayoutKind.Sequential)]
+        [IsReferenceOrContainsReferences]
         public readonly struct EnqueueResult
         {
             /// <summary>

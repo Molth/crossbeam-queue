@@ -14,6 +14,7 @@ namespace crossbeam
     /// </summary>
     /// <typeparam name="T">The type of elements stored in the queue.</typeparam>
     [StructLayout(LayoutKind.Sequential, Size = 5 * CACHE_LINE_SIZE)]
+    [IsReferenceOrContainsReferences]
     internal struct RawSegQueue<T>
     {
         /// <summary>
@@ -92,7 +93,7 @@ namespace crossbeam
                         }
                     }
 
-                    var newTail = unchecked(tail + (1 << (int)SHIFT));
+                    var newTail = tail + (1 << (int)SHIFT);
 
                     var t = _tail.GetIndexRef().CompareExchange(newTail, tail);
 
@@ -102,14 +103,14 @@ namespace crossbeam
                         {
                             var nextBlockUnwrap = nextBlock!;
                             nextBlock = null;
-                            var nextIndex = unchecked(newTail + (1 << (int)SHIFT));
+                            var nextIndex = newTail.WrappingAdd(1 << (int)SHIFT);
 
                             _tail.GetBlockRef().Store(nextBlockUnwrap, Ordering.Release);
                             _tail.GetIndexRef().Store(nextIndex, Ordering.Release);
                             block.Next.Store(nextBlockUnwrap, Ordering.Release);
                         }
 
-                        ref var slot = ref Slots<T>.GetUnchecked(ref block.Slots, offset);
+                        ref var slot = ref block.Slots.GetUnchecked(offset);
                         slot.Value = value;
                         slot.State.Or(WRITE);
 
@@ -158,7 +159,7 @@ namespace crossbeam
                     continue;
                 }
 
-                var newHead = unchecked(head + (1 << (int)SHIFT));
+                var newHead = head + (1 << (int)SHIFT);
 
                 if ((newHead & HAS_NEXT) == 0)
                 {
@@ -190,7 +191,7 @@ namespace crossbeam
                     if (offset + 1 == BLOCK_CAP)
                     {
                         var next = block.WaitNext();
-                        var nextIndex = unchecked((newHead & ~HAS_NEXT) + (1 << (int)SHIFT));
+                        var nextIndex = (newHead & ~HAS_NEXT).WrappingAdd(1 << (int)SHIFT);
                         if (next.Next.Load(Ordering.Relaxed) != null)
                             nextIndex |= HAS_NEXT;
 
@@ -198,7 +199,7 @@ namespace crossbeam
                         _head.GetIndexRef().Store(nextIndex, Ordering.Release);
                     }
 
-                    ref var slot = ref Slots<T>.GetUnchecked(ref block.Slots, offset);
+                    ref var slot = ref block.Slots.GetUnchecked(offset);
                     slot.WaitWrite();
 
                     var value = slot.Value;
@@ -206,9 +207,9 @@ namespace crossbeam
                         slot.Value = default;
 
                     if (offset + 1 == BLOCK_CAP)
-                        Destroy(block, 0);
+                        DestroyBlock(block, 0);
                     else if ((slot.State.Or(READ) & DESTROY) != 0)
-                        Destroy(block, offset + 1);
+                        DestroyBlock(block, offset + 1);
 
                     result = value;
                     return true;
@@ -257,19 +258,19 @@ namespace crossbeam
                     head &= unchecked((nuint)~((1 << (int)SHIFT) - 1));
 
                     if (((tail >> (int)SHIFT) & (LAP - 1)) == LAP - 1)
-                        tail = unchecked(tail + (1 << (int)SHIFT));
+                        tail = tail.WrappingAdd(1 << (int)SHIFT);
 
                     if (((head >> (int)SHIFT) & (LAP - 1)) == LAP - 1)
-                        head = unchecked(head + (1 << (int)SHIFT));
+                        head = head.WrappingAdd(1 << (int)SHIFT);
 
                     var lap = (head >> (int)SHIFT) / LAP;
-                    tail = unchecked(tail - ((lap * LAP) << (int)SHIFT));
-                    head = unchecked(head - ((lap * LAP) << (int)SHIFT));
+                    tail = tail.WrappingSub((lap * LAP) << (int)SHIFT);
+                    head = head.WrappingSub((lap * LAP) << (int)SHIFT);
 
                     tail >>= (int)SHIFT;
                     head >>= (int)SHIFT;
 
-                    return unchecked(tail - head - tail / LAP);
+                    return tail - head - tail / LAP;
                 }
             }
         }
@@ -281,11 +282,11 @@ namespace crossbeam
         /// </summary>
         /// <param name="block">The block to destroy or return to the reuse pool.</param>
         /// <param name="start">The first slot to inspect.</param>
-        private void Destroy(Block<T> block, nuint start)
+        private void DestroyBlock(Block<T> block, nuint start)
         {
             for (var i = start; i < BLOCK_CAP - 1; ++i)
             {
-                ref var slot = ref Slots<T>.GetUnchecked(ref block.Slots, i);
+                ref var slot = ref block.Slots.GetUnchecked(i);
 
                 if ((slot.State.Load(Ordering.Acquire) & READ) == 0 && (slot.State.Or(DESTROY) & READ) == 0)
                     return;

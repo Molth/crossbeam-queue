@@ -47,6 +47,18 @@ namespace crossbeam
         public const nuint HAS_NEXT = 1;
 
         /// <summary>
+        ///     Returns a reference to a slot without checking the index.
+        /// </summary>
+        /// <param name="slots">The block slot storage.</param>
+        /// <param name="index">The zero-based slot index.</param>
+        /// <returns>A reference to the slot at <paramref name="index" />.</returns>
+        /// <remarks>
+        ///     The caller must ensure that <paramref name="index" /> is less than <see cref="BLOCK_CAP" />.
+        /// </remarks>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static ref Slot<T> GetUnchecked<T>(ref this Slots<T> slots, nuint index) => ref Unsafe.Add(ref Unsafe.As<Slots<T>, Slot<T>>(ref slots), (nint)index);
+
+        /// <summary>
         ///     Returns a reference to the queue index stored in a padded position.
         /// </summary>
         /// <typeparam name="T">The type of elements stored in the queue.</typeparam>
@@ -80,6 +92,7 @@ namespace crossbeam
         /// </summary>
         /// <typeparam name="T">The type of elements stored in the queue.</typeparam>
         [StructLayout(LayoutKind.Sequential)]
+        [IsReferenceOrContainsReferences]
         public struct Slot<T>
         {
             /// <summary>
@@ -108,7 +121,9 @@ namespace crossbeam
         ///     Stores the fixed number of slots in a block as contiguous fields.
         /// </summary>
         /// <typeparam name="T">The type of elements stored in the queue.</typeparam>
+        [FixedLengthArray(typeof(Slot<>), (int)BLOCK_CAP)]
         [StructLayout(LayoutKind.Sequential)]
+        [IsReferenceOrContainsReferences]
         public struct Slots<T>
         {
             /// <summary>
@@ -146,18 +161,6 @@ namespace crossbeam
                 _slot28,
                 _slot29,
                 _slot30;
-
-            /// <summary>
-            ///     Returns a reference to a slot without checking the index.
-            /// </summary>
-            /// <param name="slots">The block slot storage.</param>
-            /// <param name="index">The zero-based slot index.</param>
-            /// <returns>A reference to the slot at <paramref name="index" />.</returns>
-            /// <remarks>
-            ///     The caller must ensure that <paramref name="index" /> is less than <see cref="BLOCK_CAP" />.
-            /// </remarks>
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public static ref Slot<T> GetUnchecked(ref Slots<T> slots, nuint index) => ref Unsafe.Add(ref slots._slot00, (nint)index);
         }
 
         /// <summary>
@@ -168,6 +171,7 @@ namespace crossbeam
         ///     Each block can hold up to <see cref="BLOCK_CAP" /> elements.
         /// </remarks>
         [StructLayout(LayoutKind.Sequential)]
+        [IsReferenceOrContainsReferences]
         public sealed class Block<T>
         {
             /// <summary>
@@ -212,6 +216,8 @@ namespace crossbeam
         ///     <c>Unsafe.SizeOf&lt;T&gt;()</c> on every supported runtime and architecture.
         /// </remarks>
         [StructLayout(LayoutKind.Explicit, Size = CACHE_LINE_SIZE)]
+        [IsReferenceOrContainsReferences]
+        [BindingType(typeof(Position))]
         public struct CachePaddedPosition
         {
             /// <summary>
@@ -223,6 +229,7 @@ namespace crossbeam
             ///     Stores a queue index and the block containing that index.
             /// </summary>
             [StructLayout(LayoutKind.Sequential)]
+            [IsReferenceOrContainsReferences]
             public struct Position
             {
                 /// <summary>
@@ -242,6 +249,8 @@ namespace crossbeam
         /// </summary>
         /// <typeparam name="T">The type of elements stored in the queue.</typeparam>
         [StructLayout(LayoutKind.Sequential)]
+        [IsReferenceOrContainsReferences]
+        [BindingType(typeof(CachePaddedPosition))]
         public struct CachePaddedPosition<T>
         {
             /// <summary>
