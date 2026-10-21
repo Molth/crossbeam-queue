@@ -203,8 +203,9 @@ namespace crossbeam
             ///     Gets the oldest element replaced by <see cref="Enqueue" />.
             /// </summary>
             /// <param name="overwritten">
-            ///     When this method returns, contains the replaced element if one was replaced;
-            ///     otherwise, contains the default value of the element type.
+            ///     When this method returns <see langword="true" />, contains the replaced element,
+            ///     which may be <see langword="null" />; otherwise, contains the default value of
+            ///     the element type.
             /// </param>
             /// <returns>
             ///     <see langword="true" /> if <see cref="Enqueue" /> replaced an element;

@@ -4,20 +4,14 @@
 
 Concurrent multi-producer, multi-consumer queues for C#.
 
-## Choose a queue
-
-| Type            | Storage                   | Behavior                                                                                                                             |
-|-----------------|---------------------------|--------------------------------------------------------------------------------------------------------------------------------------|
-| `ArrayQueue<T>` | Fixed-capacity array      | `TryEnqueue` returns `false` when full. `Enqueue` replaces the oldest element when full and reports the replaced value.              |
-| `SegQueue<T>`   | Linked, fixed-size blocks | Grows as needed. Its constructor capacity limits how many unused blocks are retained for reuse, not how many elements can be queued. |
-
-Both constructors require a positive capacity.
-
 ## `ArrayQueue<T>`
 
-Use `ArrayQueue<T>` when the number of queued elements must stay within a fixed bound.
-`TryEnqueue` leaves a full queue unchanged and returns `false`. `Enqueue` always adds the new
-element; when full, it removes the oldest element and returns it in an `EnqueueResult`.
+Use `ArrayQueue<T>` when the number of queued elements must stay within a fixed bound. Its
+constructor requires a positive `capacity`, which sets the maximum number of queued elements.
+
+- `TryEnqueue` leaves a full queue unchanged and returns `false`.
+- `Enqueue` always adds the new element. If the queue is full, it removes the oldest element and
+  reports it in an `EnqueueResult`.
 
 ```csharp
 using System;
@@ -35,14 +29,18 @@ while (queue.TryDequeue(out var item))
     Console.WriteLine(item);
 ```
 
-Use `EnqueueResult.TryGetOverwritten` to determine whether an element was replaced and retrieve it.
-The replaced value may itself be `null` or the default value of `T`.
+`EnqueueResult.TryGetOverwritten` returns `true` if an element was replaced. Otherwise, it returns
+`false` and sets the output to `default`. Check the Boolean result: the replaced element itself may
+be `null` or the default value of `T`.
 
 ## `SegQueue<T>`
 
-Use `SegQueue<T>` when there is no fixed element capacity. It allocates additional blocks as
-needed. Its constructor argument sets the maximum number of unused blocks kept for reuse; blocks
-beyond that limit are not retained in the reuse pool.
+Use `SegQueue<T>` when you need a queue without a fixed element-count limit.
+
+- The queue allocates blocks as needed.
+- Its constructor requires a positive `capacity`. This sets the maximum number of unused blocks
+  retained for reuse; it does not limit queued elements. Blocks beyond that limit are not retained
+  in the reuse pool.
 
 ```csharp
 using System;
@@ -58,19 +56,23 @@ while (queue.TryDequeue(out var item))
 
 ## Concurrent use
 
-Both queue types support concurrent producers and consumers. Both expose `Count` and `IsEmpty`;
-`ArrayQueue<T>` also exposes `Capacity` and `IsFull`. These properties report the state observed
-when read, and another operation may change the queue immediately afterward. Do not use them to
-reserve capacity or coordinate queue operations; use the result of `TryEnqueue` or `TryDequeue`
-instead.
+Both queue types support concurrent producers and consumers.
 
-The queues accept `null` values. For `TryDequeue`, use the returned `bool` to distinguish an empty
-queue from a dequeued `null` value.
+- `Count` and `IsEmpty` are snapshots and may change immediately. `ArrayQueue<T>` also exposes a
+  fixed `Capacity` and snapshot `IsFull`. Use the result of `TryEnqueue` or `TryDequeue` to know
+  whether that operation succeeded.
+- `null` is a valid element. `TryDequeue` returns `true` and the removed value when successful; if
+  the queue is empty, it returns `false` and sets the output to `default`. Use the Boolean result to
+  distinguish an empty queue from one that returned `null`.
 
 ## Api scope
 
-These queues are not drop-in replacements for `ConcurrentQueue<T>`,
-they do not provide `TryPeek`, `GetEnumerator`, or `Clear`.
+These queues are not drop-in replacements for `ConcurrentQueue<T>`. They focus on enqueue and
+dequeue operations and do not provide:
+
+- `TryPeek`
+- `GetEnumerator`
+- `Clear`
 
 ## Rust implementations
 
