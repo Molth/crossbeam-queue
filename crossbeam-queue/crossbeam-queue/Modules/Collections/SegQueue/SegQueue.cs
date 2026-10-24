@@ -49,14 +49,14 @@ namespace crossbeam
         /// <summary>
         ///     Returns a reference to a slot without checking the index.
         /// </summary>
-        /// <param name="slots">The block slot storage.</param>
+        /// <param name="buffer">The block slot storage.</param>
         /// <param name="index">The zero-based slot index.</param>
         /// <returns>A reference to the slot at <paramref name="index" />.</returns>
         /// <remarks>
         ///     The caller must ensure that <paramref name="index" /> is less than <see cref="BLOCK_CAP" />.
         /// </remarks>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static ref Slot<T> GetUnchecked<T>(ref this Slots<T> slots, nuint index) => ref Unsafe.Add(ref Unsafe.As<Slots<T>, Slot<T>>(ref slots), (nint)index);
+        public static ref Slot<T> GetUnchecked<T>(ref this Slots<T> buffer, nuint index) => ref Unsafe.Add(ref Unsafe.As<Slots<T>, Slot<T>>(ref buffer), (nint)index);
 
         /// <summary>
         ///     Returns a reference to the queue index stored in a padded position.
@@ -170,8 +170,6 @@ namespace crossbeam
         /// <remarks>
         ///     Each block can hold up to <see cref="BLOCK_CAP" /> elements.
         /// </remarks>
-        [StructLayout(LayoutKind.Sequential)]
-        [IsReferenceOrContainsReferences]
         public sealed class Block<T>
         {
             /// <summary>

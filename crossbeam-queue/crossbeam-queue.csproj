@@ -7,7 +7,7 @@
         <Nullable>enable</Nullable>
 
         <PackageId>crossbeam-queue</PackageId>
-        <Version>1.0.6</Version>
+        <Version>1.0.7</Version>
         <Authors>Molth Nevin</Authors>
         <Company>Hell</Company>
         <Description>Bounded and unbounded multi-producer, multi-consumer queues.</Description>
